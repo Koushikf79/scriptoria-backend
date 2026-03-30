@@ -3,7 +3,6 @@ package com.scriptoria.config;
 import com.scriptoria.controller.AnalysisWebSocketHandler;
 import jakarta.websocket.server.ServerContainer;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -17,13 +16,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final AnalysisWebSocketHandler analysisWebSocketHandler;
 
-    @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
-    private String[] allowedOrigins;
-
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(analysisWebSocketHandler, "/ws/analyze")
-                .setAllowedOriginPatterns(allowedOrigins);
+                .setAllowedOriginPatterns("*");
     }
 
     @Bean
