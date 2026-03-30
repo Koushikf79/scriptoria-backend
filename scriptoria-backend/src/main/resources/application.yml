@@ -26,9 +26,9 @@ spring:
 
 # ─── OpenRouter ───────────────────────────────────────────────────────────────
 openrouter:
-  api-key: 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
+  api-key: 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
   base-url: https://openrouter.ai/api/v1
-  model: openai/gpt-oss-20b:nitro
+  model: openai/gpt-5.4-mini
   max-completion-tokens: 8192
   top-p: 0.95
 
