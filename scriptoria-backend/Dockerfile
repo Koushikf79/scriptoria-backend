@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Build the project
-RUN ./mvnw clean package -DskipTests
+RUN apt-get update && apt-get install -y maven && mvn clean package -DskipTests
 
 # Run the jar
 CMD ["java", "-jar", "target/*.jar"]
