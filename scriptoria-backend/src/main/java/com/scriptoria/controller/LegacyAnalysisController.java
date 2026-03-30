@@ -26,115 +26,69 @@ public class LegacyAnalysisController {
     @PostMapping("/budget")
     public ResponseEntity<Map<String, Object>> estimateBudget(@RequestBody(required = false) Map<String, Object> payload) {
         if (payload == null) payload = Map.of();
+        String market = readMarket(payload);
+        ScriptAnalysisResponse analysis = resolveAnalysis(payload);
         try {
-            String market = readMarket(payload);
-            ScriptAnalysisResponse analysis = resolveAnalysis(payload);
             BudgetSimulationResponse budget = budgetSimulationService.simulate(analysis, market);
             return ResponseEntity.ok(toBudgetCompatibilityMap(budget, market));
         } catch (Exception ex) {
-            String market = readMarket(payload);
-            ScriptAnalysisResponse analysis;
-            try {
-                analysis = resolveAnalysis(payload);
-            } catch (Exception ignored) {
-                analysis = buildFallbackAnalysis(payload);
-            }
-            log.warn("Budget endpoint fallback for market {}: {}", market, ex.getMessage());
-            BudgetSimulationResponse fallback = buildFallbackBudget(analysis, market);
-            return ResponseEntity.ok(toBudgetCompatibilityMap(fallback, market));
+            log.error("Budget AI analysis failed for market {}: {}", market, ex.getMessage(), ex);
+            throw new RuntimeException("AI budget estimation failed. No deterministic fallback is enabled.");
         }
     }
 
     @PostMapping("/risk")
     public ResponseEntity<Map<String, Object>> evaluateRisk(@RequestBody(required = false) Map<String, Object> payload) {
         if (payload == null) payload = Map.of();
+        String market = readMarket(payload);
+        ScriptAnalysisResponse analysis = resolveAnalysis(payload);
+        BudgetSimulationResponse budget;
         try {
-            String market = readMarket(payload);
-            ScriptAnalysisResponse analysis = resolveAnalysis(payload);
-            BudgetSimulationResponse budget;
-            try {
-                budget = budgetSimulationService.simulate(analysis, market);
-            } catch (Exception ex) {
-                log.warn("Risk endpoint budget AI unavailable, using fallback budget for market {}: {}", market, ex.getMessage());
-                budget = buildFallbackBudget(analysis, market);
-            }
-
-            int riskScore = computeRiskScore(analysis);
-            String riskLevel = riskScore >= 75 ? "HIGH" : (riskScore >= 45 ? "MEDIUM" : "LOW");
-            long midBudget = budget.getMid() != null ? budget.getMid().getTotalBudget() : 0L;
-
-            List<String> riskFactors = new ArrayList<>();
-            if (analysis.getVfxScenesCount() > 5) riskFactors.add("High VFX scene count may increase execution and post costs.");
-            if (analysis.getNightScenesCount() > 8) riskFactors.add("Many night scenes can stretch schedule and lighting budget.");
-            if ((analysis.getLocationFrequency() != null ? analysis.getLocationFrequency().size() : 0) > 10) {
-                riskFactors.add("Frequent location switches may increase logistics complexity.");
-            }
-            if (analysis.getAvgActionIntensity() >= 6.0) riskFactors.add("Action-heavy staging increases stunt and safety overhead.");
-            if (riskFactors.isEmpty()) riskFactors.add("No major production risk spikes detected from screenplay structure.");
-
-            List<String> recommendations = List.of(
-                    "Lock top 3 high-cost scenes in pre-production with detailed call sheets.",
-                    "Reserve contingency for VFX, weather, and location slippage.",
-                    "Prioritize schedule clustering for similar locations/time-of-day blocks."
-            );
-
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("market", market);
-            response.put("riskScore", riskScore);
-            response.put("risk_score", riskScore);
-            response.put("riskLevel", riskLevel);
-            response.put("risk_level", riskLevel);
-            response.put("overallRisk", riskLevel);
-            response.put("overall_risk", riskLevel);
-            response.put("summary", "Estimated production risk is " + riskLevel + " (" + riskScore + "/100).");
-            response.put("riskFactors", riskFactors);
-            response.put("risk_factors", riskFactors);
-            response.put("recommendations", recommendations);
-            response.put("estimatedMidBudget", midBudget);
-            response.put("estimated_mid_budget", midBudget);
-            response.put("currency", budget.getCurrency());
-            response.put("costVolatility", riskLevel);
-            response.put("cost_volatility", riskLevel);
-            response.put("contingencySuggestionPct", riskLevel.equals("HIGH") ? 18 : (riskLevel.equals("MEDIUM") ? 12 : 8));
-            response.put("contingency_suggestion_pct", response.get("contingencySuggestionPct"));
-            return ResponseEntity.ok(response);
+            budget = budgetSimulationService.simulate(analysis, market);
         } catch (Exception ex) {
-            String market = readMarket(payload);
-            ScriptAnalysisResponse analysis;
-            try {
-                analysis = resolveAnalysis(payload);
-            } catch (Exception ignored) {
-                analysis = buildFallbackAnalysis(payload);
-            }
-            BudgetSimulationResponse budget = buildFallbackBudget(analysis, market);
-            int riskScore = computeRiskScore(analysis);
-            String riskLevel = riskScore >= 75 ? "HIGH" : (riskScore >= 45 ? "MEDIUM" : "LOW");
-            log.warn("Risk endpoint hard fallback for market {}: {}", market, ex.getMessage());
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("market", market);
-            response.put("riskScore", riskScore);
-            response.put("risk_score", riskScore);
-            response.put("riskLevel", riskLevel);
-            response.put("risk_level", riskLevel);
-            response.put("overallRisk", riskLevel);
-            response.put("overall_risk", riskLevel);
-            response.put("summary", "Estimated production risk is " + riskLevel + " (" + riskScore + "/100).");
-            response.put("riskFactors", List.of("Risk computed from fallback screenplay complexity signals."));
-            response.put("risk_factors", response.get("riskFactors"));
-            response.put("recommendations", List.of(
-                    "Use contingency reserves for uncertain scenes.",
-                    "Prioritize schedule clustering by location."
-            ));
-            long midBudget = budget.getMid() != null ? budget.getMid().getTotalBudget() : 0L;
-            response.put("estimatedMidBudget", midBudget);
-            response.put("estimated_mid_budget", midBudget);
-            response.put("currency", budget.getCurrency());
-            response.put("costVolatility", riskLevel);
-            response.put("cost_volatility", riskLevel);
-            response.put("contingencySuggestionPct", riskLevel.equals("HIGH") ? 18 : (riskLevel.equals("MEDIUM") ? 12 : 8));
-            response.put("contingency_suggestion_pct", response.get("contingencySuggestionPct"));
-            return ResponseEntity.ok(response);
+            log.error("Risk endpoint requires AI budget analysis but it failed for market {}: {}", market, ex.getMessage(), ex);
+            throw new RuntimeException("AI budget estimation failed. No deterministic fallback is enabled.");
         }
+
+        int riskScore = computeRiskScore(analysis);
+        String riskLevel = riskScore >= 75 ? "HIGH" : (riskScore >= 45 ? "MEDIUM" : "LOW");
+        long midBudget = budget.getMid() != null ? budget.getMid().getTotalBudget() : 0L;
+
+        List<String> riskFactors = new ArrayList<>();
+        if (analysis.getVfxScenesCount() > 5) riskFactors.add("High VFX scene count may increase execution and post costs.");
+        if (analysis.getNightScenesCount() > 8) riskFactors.add("Many night scenes can stretch schedule and lighting budget.");
+        if ((analysis.getLocationFrequency() != null ? analysis.getLocationFrequency().size() : 0) > 10) {
+            riskFactors.add("Frequent location switches may increase logistics complexity.");
+        }
+        if (analysis.getAvgActionIntensity() >= 6.0) riskFactors.add("Action-heavy staging increases stunt and safety overhead.");
+        if (riskFactors.isEmpty()) riskFactors.add("No major production risk spikes detected from screenplay structure.");
+
+        List<String> recommendations = List.of(
+                "Lock top 3 high-cost scenes in pre-production with detailed call sheets.",
+                "Reserve contingency for VFX, weather, and location slippage.",
+                "Prioritize schedule clustering for similar locations/time-of-day blocks."
+        );
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("market", market);
+        response.put("riskScore", riskScore);
+        response.put("risk_score", riskScore);
+        response.put("riskLevel", riskLevel);
+        response.put("risk_level", riskLevel);
+        response.put("overallRisk", riskLevel);
+        response.put("overall_risk", riskLevel);
+        response.put("summary", "Estimated production risk is " + riskLevel + " (" + riskScore + "/100).");
+        response.put("riskFactors", riskFactors);
+        response.put("risk_factors", riskFactors);
+        response.put("recommendations", recommendations);
+        response.put("estimatedMidBudget", midBudget);
+        response.put("estimated_mid_budget", midBudget);
+        response.put("currency", budget.getCurrency());
+        response.put("costVolatility", riskLevel);
+        response.put("cost_volatility", riskLevel);
+        response.put("contingencySuggestionPct", riskLevel.equals("HIGH") ? 18 : (riskLevel.equals("MEDIUM") ? 12 : 8));
+        response.put("contingency_suggestion_pct", response.get("contingencySuggestionPct"));
+        return ResponseEntity.ok(response);
     }
 
     private ScriptAnalysisResponse resolveAnalysis(Map<String, Object> payload) {
