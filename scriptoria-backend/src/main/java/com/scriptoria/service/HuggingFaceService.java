@@ -2,7 +2,6 @@ package com.scriptoria.service;
 
 import com.scriptoria.dto.SceneAnimationRequest;
 import com.scriptoria.dto.SceneImageRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +22,6 @@ import java.util.Map;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class HuggingFaceService {
 
     @Value("${huggingface.api-key}")
@@ -38,10 +36,13 @@ public class HuggingFaceService {
     @Value("${huggingface.animation-model}")
     private String animationModel;
 
-    @Qualifier("huggingFaceRestTemplate")
     private final RestTemplate restTemplate;
 
     private final ThreadLocal<Boolean> warmUpRequired = ThreadLocal.withInitial(() -> false);
+
+    public HuggingFaceService(@Qualifier("huggingFaceRestTemplate") RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     public String generateSceneImage(SceneImageRequest request) {
         String prompt = buildImagePrompt(request);

@@ -1,7 +1,6 @@
 package com.scriptoria.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,12 +19,15 @@ import java.util.Map;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiService {
 
-    @Qualifier("geminiRestTemplate")
     private final RestTemplate geminiRestTemplate;
     private final ObjectMapper objectMapper;
+
+    public AiService(@Qualifier("geminiRestTemplate") RestTemplate geminiRestTemplate, ObjectMapper objectMapper) {
+        this.geminiRestTemplate = geminiRestTemplate;
+        this.objectMapper = objectMapper;
+    }
 
     @Value("${gemini.api-key}")
     private String geminiApiKey;
