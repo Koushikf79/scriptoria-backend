@@ -1,0 +1,65 @@
+server:
+  # Render uses port 10000 by default for web services
+  # ${PORT} is automatically set by Render
+  port: ${PORT:10000}
+
+spring:
+  application:
+    name: scriptoria-backend
+  profiles:
+    default: ${SPRING_PROFILES_DEFAULT:local}
+  mvc:
+    async:
+      request-timeout: 300000
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/scriptoria}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  base-url: https://generativelanguage.googleapis.com/v1beta
+  model: gemini-1.5-flash
+  max-output-tokens: 8192
+  temperature-analysis: 0.2
+  temperature-creative: 0.85
+  chunk-size-chars: 10000
+  max-retries: 2
+
+huggingface:
+  api-key: ${HUGGINGFACE_API_KEY:}
+  base-url: https://api-inference.huggingface.co
+  image-model: stabilityai/stable-diffusion-xl-base-1.0
+  animation-model: damo-vilab/text-to-video-ms-1.7b
+
+cors:
+  allowed-origins:
+    - "http://localhost:*"
+    - "http://127.0.0.1:*"
+
+logging:
+  level:
+    com.scriptoria: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    display-request-duration: true
+
+jwt:
+  secret: ${JWT_SECRET:scriptoria-super-secret-key-change-in-production-min-256-bits}
+  expiration-ms: 86400000
