@@ -1,7 +1,5 @@
 server:
-  # Render uses port 10000 by default for web services
-  # ${PORT} is automatically set by Render
-  port: ${PORT:10000}
+  port: ${PORT:8080}
 
 spring:
   application:

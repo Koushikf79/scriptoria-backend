@@ -3,18 +3,8 @@ services:
     name: scriptoria-backend
     runtime: java
     buildCommand: mvn clean package -DskipTests
-    startCommand: java -jar target/scriptoria-backend-1.0.0.jar
+    startCommand: java -Dserver.port=$PORT -jar target/scriptoria-backend-1.0.0.jar
     healthCheckPath: /api/v1/health
     envVars:
-      - key: PORT
-        value: 8080
-      - key: DB_URL
-        fromDatabase:
-          name: scriptoria-db
-          property: connectionString
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-
-databases:
-  - name: scriptoria-db
-    plan: free
